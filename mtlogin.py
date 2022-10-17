@@ -5,11 +5,11 @@ Created on Oct 22, 2011
 @author: arefaey
 '''
 from httplib2 import Http
-from md5 import md5
+import hashlib
 import re
-from urllib import urlencode
+from urllib.parse import urlencode
 
-URL = 'http://10.0.0.2/login'
+URL = 'http://hotspot.horisongkb.net/login'
 output = '/tmp/login.html'
 salt_pattern = '\\\\\d*'
 h = Http()
@@ -20,7 +20,7 @@ def truncate_file(file):
         line = line.replace(line, '')
         f.writelines(line)
         f.flush()
-    print 'file: "%s" truncated' % f.name
+    print ('file: "%s" truncated' % f.name)
     
 def extract_salt(file):
     f = open(file, 'r')
@@ -32,7 +32,7 @@ def extract_salt(file):
     r = re.compile("\\\\\d*")
     salt = r.findall(li)
     if not salt:
-        print 'seems to be already logged in'
+        print ('seems to be already logged in')
         exit()
     x = chr(int(salt[0][1:], 8))
     rest = salt[1:]
@@ -45,6 +45,7 @@ def login(username, password):
     headers = {}
     headers.update({'Content-Type':'application/x-www-form-urlencoded'})
     response, _ = h.request(URL, method='POST', body=payload, headers=headers)
+    print(response)
     assert(response.status==200)
     try:
         response['set-cookie']
@@ -59,22 +60,23 @@ def main():
         username = argz[0]
         password = argz[1]
     except Exception:
-        print 'could not parse arguments\nusage: python main.py username password'
+        print ('could not parse arguments\nusage: python main.py username password')
         exit()
     response, content = h.request(URL)
     assert(response.status==200)
     truncate_file(output)
-    f = open(output, 'w')
+    f = open(output, 'wb')
     f.write(content)
     f.flush()
     x, y = extract_salt(output)
     salted = x + password + y
-    print 'salted password: %s' % salted
-    hashed_password = md5(salted)
-    hex_hash_password = hashed_password.hexdigest()
-    print 'hashed password: %s' % hex_hash_password
-    login(username, hex_hash_password)
-    print 'Successfully logged in ;)'
-    
+    print ('Login Name: %s' % username)
+    print ('salted password: %s' % salted)
+    print ('salted password encoded: %s' % salted.encode('ISO-8859-1'))
+    hex_hashed_password = hashlib.md5(salted.encode('ISO-8859-1')).hexdigest()
+    print ('Hex hash passowrd: %s' % hex_hashed_password)
+    login(username, hex_hashed_password)
+    print ('Successfully logged in ;)')
+
 if __name__ == '__main__':
     main()
